@@ -1,0 +1,233 @@
+---
+title: "Chapter 3"
+author: "Diogo M. Camacho"
+# date: "`r format(Sys.Date(), "%Y-%m-%d")`"
+subtitle: Make a plot
+abstract: This chapter will introduce the core functions of `ggplot` and how to make
+  a plot.
+output:
+  html_document:
+    df_print: paged
+
+---
+
+
+```{r, echo = FALSE}
+# this will load all of the packages to be used throughout the book
+source("package_loader.R")
+knitr::opts_chunk$set(fig.width = 8, fig.height = 5)
+```
+
+
+# 3.3. Mappings
+In this section we will go through the principles of plotting. We need to think of plotting, in `ggplot`, as a set of instructions in a recipe. 
+
+ - first define the data
+ - then define the geometry
+ - then add more features like labels, scales, etc
+ 
+We'll explore this with the `gapminder` data set.
+
+```{r show_data}
+gapminder
+```
+
+Now let's do a plot of these data.
+
+```{r plot1}
+p <- ggplot(data = gapminder, 
+            mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+
+p <- p + geom_point() # <-- we will look at a scatter plot
+
+p
+```
+
+
+`str(p)` will define what is already in the plot:
+
+```{r, eval= FALSE}
+str(p)
+```
+
+The `geom_point()` geometry added the points to the plot as a __layer__, which is how `ggplot` builds the plots, adding elements as additional layers. 
+
+
+# 3.4. Layer by layer
+Let's redo the plot above by adding layers, one at a time.
+
+```{r plot2}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_smooth() # <-- smoothed line
+p
+```
+
+The `geom_smooth()` call took in the data, and computed a smoothed line with the ribbon indicating the standard error for the line. We can add the data points that defined the line as an __additional layer__:
+
+```{r plot3}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_smooth() 
+p <- p + geom_point() # <-- add points
+p
+```
+
+To remember, the layers are added in order, which means that the points are being added *on top* of the regression line. To get the line on top we would do:
+
+```{r plot4}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point() # <-- add points
+p <- p + geom_smooth() # <-- now the smoothed line
+p
+```
+
+
+`geom_smooth` is using the `gam` model by default. It can use many other models. As exemplified in the book, we can force the `geom_smooth` call to use a linear model instead:
+
+```{r plot5}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point() # <-- add points
+p <- p + geom_smooth(method = "lm") # <-- now the smoothed line
+p
+```
+
+We can also add a layer to fix the distribution of plots. In this case we will use a log10 transform on the GDP data:
+
+```{r plot6}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point() # <-- add points
+p <- p + geom_smooth(method = "gam") # <-- now the smoothed line
+p <- p + scale_x_log10()
+p
+```
+
+As an important note, the scaling of the data happens before the points are added on to the layers. Now fix the x-axis label to represent dollar amount rather than the scientific notation that arose as a consequence of the scaling that was done to the data:
+
+
+```{r plot7}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point() # <-- add points
+p <- p + geom_smooth(method = "gam") # <-- now the smoothed line
+p <- p + scale_x_log10(labels = scales::dollar)
+p
+```
+
+# 3.5. Mapping aesthetics versus setting them
+
+Let's use the continent data as a color factor for our points. First lets look at what the `aes()` calls do, and how we can set colors for the points outside of the aesthetics. 
+
+```{r plot8}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = "purple")) #<-- defined the data to visualize
+p <- p + geom_point() # <-- add points
+p <- p + geom_smooth(method = "loess") # <-- now the smoothed line
+p <- p + scale_x_log10(labels = scales::dollar)
+p
+```
+
+This is a replication of figure 3.10 in the book, which showcases the issue with the `aes()` calls. What we are trying to do here is to use map the variable "purple" (which does not exist) to the color of the points. `ggplot` doesn't understand this, and so everything is colored bases on a supposed variable. This is different from coloring the points independently:
+
+```{r plot9}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point(color = "purple") # <-- add points
+p <- p + geom_smooth(method = "loess") # <-- now the smoothed line
+p <- p + scale_x_log10(labels = scales::dollar)
+p
+```
+
+Here we are specifically coloring all the points purple, as the geometry `geom_point()` overrode the `aes()` call to color the points. So, as a general rule:
+
+ - `aes()` is used for mapping variables
+ - geometries can override this by chnaging properties outside of the aesthetics mappings
+ 
+As exemplified in figure 3.12 of the book, this extends to *all* geometries:
+
+```{r plot10}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point(alpha = 0.3) # <-- add points
+p <- p + geom_smooth(method = "lm", se = FALSE, size = 2, color = "orange") # <-- now the smoothed line
+p <- p + scale_x_log10(labels = scales::dollar)
+p
+```
+
+Now we can add a title to the plot using the `labs()` function:
+
+```{r plot11}
+p <- ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) #<-- defined the data to visualize
+p <- p + geom_point(alpha = 0.3) # <-- add points
+p <- p + geom_smooth(method = "gam", se = FALSE, size = 1, color = "purple") # <-- now the smoothed line
+p <- p + scale_x_log10(labels = scales::dollar)
+p <- p + labs(x = "GDP per capita (in dollars)",
+              y = "Life expectancy (in years)",
+              title = "Economic growth and life expectancy",
+              subtitle = "Data points are country-years",
+              caption = "Source: Gapminder")
+p
+```
+
+
+(I will simplify the code from this point on using `dplyr` and not explicitly writing the p variable.)
+
+We can also do the coloring based on other variables, such as the continent or year data. As shown in figure 3.14 of the book:
+
+
+```{r plot12}
+gapminder %>% 
+  ggplot(mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+  geom_point(alpha = 0.3) + 
+  geom_smooth(method = "loess") + 
+  scale_x_log10(labels = scales::dollar) + 
+  labs(x = "GDP per capita (in dollars)",
+       y = "Life expectancy (in years)",
+       title = "Economic growth and life expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```
+
+And on figure 3.15:
+```{r plot13}
+gapminder %>% 
+  ggplot(mapping = aes(x = gdpPercap, y = lifeExp, color = continent, fill = continent)) + 
+  geom_point(alpha = 0.3) + 
+  geom_smooth(method = "loess") + 
+  scale_x_log10(labels = scales::dollar) + 
+  labs(x = "GDP per capita (in dollars)",
+       y = "Life expectancy (in years)",
+       title = "Economic growth and life expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```
+
+One thing to note: the color option colored the points, while the fill option colored he ribbon of the standard error, all based on the same variable in the data set. Given that having those many regression lines could be overkill (unless we really want to look at individual continents and their life expectancy and GDP independently), we can still color just the points while showing a single smoothing line (as in figure 3.16):
+
+```{r plot14}
+gapminder %>% 
+  ggplot(mapping = aes(x = gdpPercap, y = lifeExp)) + 
+  geom_point(mapping = aes(color = continent), alpha = 0.3) + 
+  geom_smooth(method = "loess", color = "black") + 
+  scale_x_log10(labels = scales::dollar) + 
+  labs(x = "GDP per capita (in dollars)",
+       y = "Life expectancy (in years)",
+       title = "Economic growth and life expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```
+
+We can also just add a continuous scale to color the points (Figure 3.17):
+
+```{r plot15}
+gapminder %>% 
+  ggplot(mapping = aes(x = gdpPercap, y = lifeExp)) + 
+  geom_point(mapping = aes(color = log(pop)), alpha = 0.3) + 
+  geom_smooth(method = "loess", color = "black") + 
+  scale_x_log10(labels = scales::dollar) + 
+  labs(x = "GDP per capita (in dollars)",
+       y = "Life expectancy (in years)",
+       title = "Economic growth and life expectancy",
+       subtitle = "Data points are country-years",
+       caption = "Source: Gapminder")
+
+```
+
+
